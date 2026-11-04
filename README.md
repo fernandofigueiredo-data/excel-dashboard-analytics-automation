@@ -57,6 +57,10 @@ Ou baixe o ZIP pelo botão **Code › Download ZIP** do GitHub.
 4. Para trocar o visual, escolha outro tema na lista em **Config!B3**.
 5. Para editar um gráfico do seu jeito, clique nele e depois em **Fixar gráfico**.
 
+A aba **Como usar** é a primeira ao abrir o arquivo e traz o passo a passo, como preparar a base, o que cada gráfico mostra, temas e problemas comuns:
+
+![Aba Como usar do modelo .xlsm](docs/img/xlsm_aba_como_usar.jpg)
+
 ### Temas
 
 Quatro temas: **Corporativo Azul**, **Noite Escura**, **Verde Floresta** e **Grafite e Coral**. A troca recolore cards, botões e gráficos juntos.
@@ -84,7 +88,11 @@ Para criar um tema, acrescente uma linha em `tblTemas` (nome, três cores em R,G
 3. No primeiro uso, se não existir uma aba chamada `Dados`, o suplemento pergunta se pode **renomear a aba ativa para Dados**. Responda **Sim**: ele cria `Config` e `Dashboard`.
 4. Troque o tema em `Config!B3` ou pelo botão **Aplicar tema**.
 
-Exemplo: uma pasta de trabalho comum, com uma única aba "Vendas" de 300 linhas, sem nenhuma preparação.
+A guia **Dashboard** na Faixa de Opções, com os botões **Atualizar dashboard**, **Aplicar tema** e **Fixar gráfico**, numa pasta de trabalho comum (aqui, depois de clicar em Atualizar dashboard):
+
+![Guia Dashboard na Faixa de Opções do Excel](docs/img/xlam_guia_dashboard.jpg)
+
+Exemplo em outra base: uma pasta de trabalho comum, com uma única aba "Vendas" de 300 linhas, sem nenhuma preparação.
 
 ![Suplemento num livro comum](teste_xlam/1_livro_qualquer_tema_claro.jpg)
 
@@ -101,7 +109,7 @@ O mesmo suplemento num livro de varejo (400 linhas), com o tema **Verde Floresta
   ```
 
   Gera `DashboardGenerator_faixa.xlam` (o original não é alterado) com os botões **Atualizar dashboard**, **Aplicar tema** e **Fixar gráfico**.
-- **Se o `.xlsm` e o `.xlam` estiverem abertos juntos**, a troca de tema aplica duas vezes (um evento de cada arquivo). O resultado visual é o mesmo.
+- **Não abra o `.xlsm` e o `.xlam` ao mesmo tempo.** Os dois se chamam `DashboardGenerator` e o Excel recusa ("não pode abrir duas pastas de trabalho com o mesmo nome"). Um suplemento já carregado também conta: abri o `.xlam` duas vezes e a guia **Dashboard** apareceu duplicada. Se precisar dos dois, use uma cópia do `.xlam` com outro nome (por exemplo `GeradorSuplemento.xlam`); testei essa cópia sozinha, sem o `.xlsm` aberto.
 - **Compartilhar o resultado não exige macro.** Cards e gráficos são fórmulas e gráficos nativos do Excel: quem recebe o arquivo vê os números recalcularem, inclusive no Excel para a Web. Só **Atualizar** (reconstruir) e trocar de tema dependem do suplemento ou do `.xlsm`.
 
 ---
@@ -182,6 +190,7 @@ A cópia **não** é apagada nem repintada por Atualizar ou pela troca de tema, 
 │   └── clsEventosApp.cls + EstaPastaDeTrabalho_xlam.txt   # mesmo evento (.xlam)
 ├── scripts/adicionar_faixa_xlam.py        # cria a guia na Faixa de Opções do .xlam
 ├── LEIAME.md                      # documentação técnica completa e registro de testes
+├── docs/img/                      # prints da guia do suplemento e da aba "Como usar"
 └── teste_*/                       # capturas de tela dos testes
 ```
 
@@ -197,6 +206,7 @@ Todos no Excel 16.114.1 para Mac, macOS, pt-BR. O registro completo está no [LE
 
 - **Base de exemplo (240 linhas):** 5 cards e 9 gráficos, sem avisos. Troca para "Noite Escura" recolore tudo.
 - **Suplemento em livro comum** (aba "Vendas", 300 e 400 linhas): cria `Config` e `Dashboard`; 9 gráficos pela guia.
+- **Botão "Atualizar dashboard" da Faixa de Opções** (04/11/2026): num livro com Config, Dados e Dashboard, gerou 240 registros, 5 cards e os gráficos; os botões **Atualizar** e **Fixar gráfico** apareceram na aba Dashboard.
 - **Dados reais: IFData, Banco Central (junho/2026), 1.622 linhas × 25 colunas.** O teste expôs um erro de classificação e levou à regra de identificador e código de classe:
 
 | Antes da correção | Depois da correção |

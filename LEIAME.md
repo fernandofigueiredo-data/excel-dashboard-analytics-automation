@@ -234,7 +234,7 @@ O que não foi testado:
 - a instalação permanente em Suplementos do Excel;
 - o Windows.
 
-Observação: se o modelo `.xlsm` e o suplemento estiverem abertos juntos, uma troca de tema na Config do `.xlsm` aplica o tema duas vezes, uma pelo evento de cada arquivo. O resultado é o mesmo.
+Observação (corrigida em 04/11/2026): o modelo `.xlsm` e o suplemento têm o mesmo nome base (`DashboardGenerator`) e o Excel não abre os dois juntos ("não pode abrir duas pastas de trabalho com o mesmo nome"). Para usar os dois ao mesmo tempo, renomeie uma cópia do `.xlam`. Esse cenário não foi testado.
 
 ## Ajuste da regra de código de classe (30/10/2026)
 
