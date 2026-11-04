@@ -1,0 +1,20 @@
+' =============================================================================
+' Codigo de EstaPastaDeTrabalho (ThisWorkbook) - somente no suplemento .xlam.
+' Colar no modulo "EstaPastaDeTrabalho" do projeto do suplemento.
+' =============================================================================
+Option Explicit
+
+Private mEventos As clsEventosApp
+
+'------------------------------------------------------------------------------
+' Workbook_Open
+' Proposito: ligar os eventos de aplicacao quando o suplemento e carregado,
+'            para que a troca do Tema Ativo em qualquer livro reaplique o tema.
+' Efeitos:    cria a instancia de clsEventosApp mantida enquanto o Excel roda.
+'             Se o projeto VBA for reiniciado (ex.: apos um erro em modo de
+'             depuracao), feche e reabra o Excel para religar.
+'------------------------------------------------------------------------------
+Private Sub Workbook_Open()
+    Set mEventos = New clsEventosApp
+    Set mEventos.App = Application
+End Sub

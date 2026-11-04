@@ -1,0 +1,18 @@
+' =============================================================================
+' Codigo da planilha Config (somente no modelo .xlsm).
+' Colar no modulo da planilha: no Editor do VBA, clique duas vezes em
+' "Planilha1 (Config)" (ou o nome equivalente) e cole o trecho abaixo.
+' No suplemento .xlam NAO use este trecho: o evento vem de clsEventosApp.
+' =============================================================================
+Option Explicit
+
+'------------------------------------------------------------------------------
+' Worksheet_Change
+' Proposito: reaplicar o tema quando o usuario troca o Tema Ativo (B3) ou edita
+'            a tabela de temas.
+' Parametros: Target - celulas alteradas.
+' Efeitos:    chama modTema.AplicarTema por meio de TratarMudancaConfig.
+'------------------------------------------------------------------------------
+Private Sub Worksheet_Change(ByVal Target As Range)
+    modTema.TratarMudancaConfig Me, Target
+End Sub
