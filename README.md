@@ -32,7 +32,7 @@ Os dois usam o mesmo código (`vba/`). O `.xlsm` é o "produto" fechado; o `.xla
 - **Microsoft 365** (Mac ou Windows). As fórmulas usam `LET`, `UNIQUE`, `FILTER`, `SORTBY` e `TAKE`, que não existem em versões antigas.
 - Macros habilitadas.
 
-> Testado em Excel 16.114.1 para **Mac** (pt-BR). **Windows não foi testado.** Detalhes em [Testes](#testes-e-evidências).
+> Testado no Excel para **Mac** (pt-BR), versões 16.114.1 a 16.114.4; última rodada de ponta a ponta em 08/11/2026. **Windows não foi testado.** Detalhes em [Testes](#testes-e-evidências).
 
 ## Instalação
 
@@ -109,7 +109,8 @@ O mesmo suplemento num livro de varejo (400 linhas), com o tema **Verde Floresta
   ```
 
   Gera `DashboardGenerator_faixa.xlam` (o original não é alterado) com os botões **Atualizar dashboard**, **Aplicar tema** e **Fixar gráfico**.
-- **Não abra o `.xlsm` e o `.xlam` ao mesmo tempo.** Os dois se chamam `DashboardGenerator` e o Excel recusa ("não pode abrir duas pastas de trabalho com o mesmo nome"). Um suplemento já carregado também conta: abri o `.xlam` duas vezes e a guia **Dashboard** apareceu duplicada. Se precisar dos dois, use uma cópia do `.xlam` com outro nome (por exemplo `GeradorSuplemento.xlam`); testei essa cópia sozinha, sem o `.xlsm` aberto.
+- **O `.xlsm` e o `.xlam` podem ficar abertos juntos.** Com o suplemento instalado, o `.xlsm` abre normalmente e a troca de tema funciona (testado em 08/11/2026). O que o Excel recusa é um segundo `DashboardGenerator.xlam`: com o suplemento já carregado, abrir outra cópia de mesmo nome dá "não pode abrir duas pastas de trabalho com o mesmo nome", e uma cópia com outro nome faz a guia **Dashboard** aparecer duas vezes.
+- **Para atualizar o suplemento instalado**, feche o Excel, substitua o arquivo `.xlam` na pasta de onde ele foi instalado e abra o Excel de novo. A guia já vem com a versão nova.
 - **Compartilhar o resultado não exige macro.** Cards e gráficos são fórmulas e gráficos nativos do Excel: quem recebe o arquivo vê os números recalcularem, inclusive no Excel para a Web. Só **Atualizar** (reconstruir) e trocar de tema dependem do suplemento ou do `.xlsm`.
 
 ---
@@ -158,6 +159,8 @@ A macro examina até 500 células não vazias por coluna, nas primeiras 2.000 li
 
 Regras para todos: o **título diz a conclusão** e é calculado por fórmula (ex.: *"Sudeste lidera em Receita (24% do total)"*); sem 3D; fonte de 12 pt; uma cor de destaque e cinza para o contexto. Os gráficos leem uma área auxiliar com fórmulas de matriz dinâmica (nomes `dsG_*`), então crescem junto com `tblDados`.
 
+As somas por grupo comparam a categoria pelo texto exato: valores como `<18`, `>=60` ou `Kit*` são lidos como texto, não como comparação ou curinga. Células com erro (`#N/D`) na coluna numérica ficam de fora, como nos cards.
+
 ### Fixar gráfico
 Os gráficos do Dashboard são refeitos a cada **Atualizar**, então edições neles se perdem. Para editar um gráfico:
 
@@ -202,7 +205,33 @@ Só é necessário se você alterar os `.bas`. O passo a passo completo (roteiro
 
 ## Testes e evidências
 
-Todos no Excel 16.114.1 para Mac, macOS, pt-BR. O registro completo está no [LEIAME.md](LEIAME.md).
+Todos no Excel para Mac, macOS, pt-BR: até 04/11/2026 na versão 16.114.1 e a rodada final, de 08/11/2026, na 16.114.4. O registro completo está no [LEIAME.md](LEIAME.md).
+
+### Rodada final de ponta a ponta (08/11/2026)
+
+Os números de cada gráfico foram lidos do Excel e comparados com somas calculadas em Python a partir dos mesmos dados, valor por valor.
+
+| Teste | Resultado |
+|---|---|
+| `.xlsm` com a base de exemplo (240 linhas) | 5 cards e 9 gráficos, sem avisos; os 66 valores da área auxiliar iguais ao cálculo independente |
+| Categorias `<18`, `>=60` e `Kit*` (120 linhas) | 58 valores iguais ao cálculo independente |
+| Coluna numérica com `#N/D` em 2 linhas (80 linhas) | 45 valores iguais ao cálculo independente; os cards e os gráficos somam o mesmo total |
+| Botão **Aplicar tema** da faixa | Aplicou o tema de `Config!B3` depois de uma troca feita com os eventos desligados |
+| Botão **Fixar gráfico** da faixa, com gráfico selecionado | Cópia em **Meus gráficos** ligada a nomes próprios; ela acompanhou uma mudança na base sem clicar em Atualizar |
+| Instalação permanente em Suplementos do Excel | Ao abrir o Excel, a guia **Dashboard** apareceu sem abrir o `.xlam`, e o painel saiu certo |
+| `.xlsm` aberto com o suplemento instalado | Abriu na aba **Como usar**; troca de tema e Fixar gráfico funcionaram |
+| Pasta em branco | **Aplicar tema** e **Fixar gráfico** avisam que o livro ainda não tem Dashboard |
+
+A rodada achou e corrigiu dois erros que davam número errado sem aviso, e os títulos dos gráficos afetados tiravam a conclusão errada:
+
+| Antes da correção | Depois da correção |
+|---|---|
+| ![antes](teste_bordas/1_antes_categorias_com_operadores.jpg) | ![depois](teste_bordas/2_depois_categorias_com_operadores.jpg) |
+| `<18` e `>=60` somavam 0, e `Kit*` somava também `Kit`: "30-59 lidera em Valor" e "Kit* lidera em Valor (50% do total)" | "<18 lidera em Valor (29% do total)" e "Kit lidera em Valor (26% do total)" |
+| ![antes](teste_bordas/3_antes_nd_na_medida.jpg) | ![depois](teste_bordas/4_depois_nd_na_medida.jpg) |
+| Um `#N/D` zerava o grupo inteiro: "Sul lidera em Valor (0% do total)" | "Oeste lidera em Valor (29% do total)", com o Sul somando os valores válidos |
+
+### Testes anteriores
 
 - **Base de exemplo (240 linhas):** 5 cards e 9 gráficos, sem avisos. Troca para "Noite Escura" recolore tudo.
 - **Suplemento em livro comum** (aba "Vendas", 300 e 400 linhas): cria `Config` e `Dashboard`; 9 gráficos pela guia.
@@ -221,12 +250,10 @@ A conferência contra a planilha do analista bateu: **Soma do Ativo Total R$ 19.
 - A aba **Dashboard** é recriada inteira a cada Atualizar: não coloque conteúdo manual nela (use **Fixar gráfico**).
 - A base precisa começar em **Dados!A1**, com cabeçalho na linha 1.
 - Agrupamentos usam a **1ª e a 2ª** colunas categóricas. Se uma delas tem valor único por linha (ex.: nome da instituição), o gráfico vira um ranking "10 maiores", não um agrupamento.
-- Erro de fórmula (`#N/D`) em coluna numérica faz o `SUMIFS` dos gráficos devolver erro; os cards não são afetados.
-- Categorias com `*`, `?` ou `~` são lidas como curinga e podem distorcer somas.
 - Datas guardadas como texto contam como coluna categórica.
 - Coluna de inteiros com poucos valores e cabeçalho em sigla curta maiúscula (ex.: `QTD`) é tratada como código de classe. Renomeie por extenso (`Quantidade`) para virar medida.
 - A **árvore** lê o intervalo do último Atualizar; se o número de grupos mudar, clique em Atualizar. Seu título não recebe negrito e cor do tema.
-- **Não testado:** Windows; instalação permanente em Suplementos do Excel; botão **Aplicar tema** da Faixa de Opções (chama a mesma rotina da troca pela Config).
+- **Não testado:** Windows.
 
 ## Licença
 

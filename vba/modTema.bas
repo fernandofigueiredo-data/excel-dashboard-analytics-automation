@@ -31,7 +31,7 @@ Public Sub AplicarTema(Optional ByVal wb As Workbook)
     If wb Is Nothing Then Set wb = modUtil.LivroAlvo()
     If wb Is Nothing Then Exit Sub
     If modUtil.ObterPlanilha(wb, modConfig.PLAN_CONFIG) Is Nothing Then
-        MsgBox modUtil.U("Este livro ainda n\u00e3o tem a planilha Config. Execute AtualizarTudo primeiro."), _
+        MsgBox modUtil.U("Este livro ainda n\u00e3o tem Dashboard. Clique em Atualizar primeiro."), _
                vbInformation, "Dashboard"
         Exit Sub
     End If

@@ -43,6 +43,11 @@ Option Private Module   ' rotinas internas: fora da lista de macros
 ' Os graficos leem a area auxiliar (formulas de matriz dinamica) por nomes
 ' definidos dsG_* com referencia de derramamento; a arvore le o intervalo
 ' derramado atual (o Excel nao aceita nome nesse tipo de grafico).
+'
+' SOMAS POR GRUPO (Agg + Igual)
+'   A categoria e comparada por igualdade exata: "<18", ">=60" e "Kit*" sao
+'   lidos como texto, nao como comparacao ou curinga. Celulas com erro na
+'   medida (#N/D) ficam de fora, como nos cards (AGGREGATE).
 '==============================================================================
 
 Private Const MAX_CAT As Long = 7
@@ -200,7 +205,7 @@ Private Sub GraficoRanking(ByVal kind As String, ByVal jCat As Long, ByVal horiz
     cCat.Formula2 = "=IFERROR(" & GruposOrdenados(jCat, MAX_CAT) & ",""(vazio)"")"
     Cel(4, col).Value = NomeCol(jCat)
     For i = 1 To nm
-        Cel(5, col + i).Formula2 = "=IFERROR(" & Agg(MedidaN(i), Ref(jCat) & "," & Sp(cCat)) & ",0)"
+        Cel(5, col + i).Formula2 = "=IFERROR(" & Agg(MedidaN(i), Ref(jCat) & "," & Igual(Sp(cCat))) & ",0)"
         Cel(4, col + i).Value = NomeMedidaN(i)
         FormatarValores col + i, MedidaN(i)
         NomeSpill "dsG_" & kind & "_V" & i, Cel(5, col + i)
@@ -244,12 +249,12 @@ Private Sub GraficosComposicao(ByVal jCat As Long, ByVal jPar As Long, ByVal nDi
     NomeSpill "dsG_Emp_C", cRows
     For i = 1 To nNomeadas
         Cel(4, col + i).Formula2 = "=IFERROR(INDEX(" & GruposOrdenados(jPar, 0) & "," & i & "),"""")"
-        Cel(5, col + i).Formula2 = "=IFERROR(" & Agg(mINum, Ref(jCat) & "," & Sp(cRows) & "," & Ref(jPar) & "," & _
-            Cel(4, col + i).Address) & ",0)"
+        Cel(5, col + i).Formula2 = "=IFERROR(" & Agg(mINum, Ref(jCat) & "," & Igual(Sp(cRows)) & "," & Ref(jPar) & "," & _
+            Igual(Cel(4, col + i).Address)) & ",0)"
     Next i
     If outros Then
         Cel(4, col + np).Value = "Outros"
-        f = "=IFERROR(" & Agg(mINum, Ref(jCat) & "," & Sp(cRows))
+        f = "=IFERROR(" & Agg(mINum, Ref(jCat) & "," & Igual(Sp(cRows)))
         For i = 1 To nNomeadas
             f = f & "-" & Sp(Cel(5, col + i))
         Next i
@@ -401,7 +406,7 @@ Private Sub GraficoFatias(ByVal kind As String, ByVal jDim As Long)
     Set cCat = Cel(5, col)
     Set cVal = Cel(5, col + 1)
     cCat.Formula2 = "=IFERROR(" & GruposOrdenados(jDim, 0) & ",""(vazio)"")"
-    cVal.Formula2 = "=IFERROR(" & Agg(mINum, Ref(jDim) & "," & Sp(cCat)) & ",0)"
+    cVal.Formula2 = "=IFERROR(" & Agg(mINum, Ref(jDim) & "," & Igual(Sp(cCat))) & ",0)"
     Cel(4, col).Value = NomeCol(jDim)
     Cel(4, col + 1).Value = NomeMedidaN(1)
     EstiloCabecalho col, col + 1
@@ -886,13 +891,38 @@ Private Function NomeMedidaN(ByVal i As Long) As String
     If MedidaN(i) = 0 Then NomeMedidaN = "Registros" Else NomeMedidaN = NomeCol(MedidaN(i))
 End Function
 
-' SUMIFS da medida j (ou COUNTIFS se j = 0) com a lista "faixa,criterio,...".
+'------------------------------------------------------------------------------
+' Agg
+' Proposito: SUMIFS da medida j (ou COUNTIFS se j = 0) com a lista
+'            "faixa,criterio,...". Os criterios de categoria passam por Igual.
+' Efeitos:    o par final (medida,">-1E+307") deixa de fora as celulas com erro
+'             (#N/D etc.). Sem ele, um unico erro zerava o grupo inteiro e o
+'             titulo tirava a conclusao errada (teste de 08/11/2026). Assim o
+'             grafico soma o mesmo que os cards, que usam AGGREGATE.
+'------------------------------------------------------------------------------
 Private Function Agg(ByVal j As Long, ByVal crit As String) As String
     If j > 0 Then
-        Agg = "SUMIFS(" & Ref(j) & "," & crit & ")"
+        Agg = "SUMIFS(" & Ref(j) & "," & crit & "," & Ref(j) & ","">-1E+307"")"
     Else
         Agg = "COUNTIFS(" & crit & ")"
     End If
+End Function
+
+'------------------------------------------------------------------------------
+' Igual
+' Proposito: criterio de igualdade exata para SUMIFS/COUNTIFS a partir de uma
+'            celula, faixa derramada ou nome do LET (expr).
+'            - Texto ganha "=" na frente: sem isso, "<18" e ">=60" viram
+'              comparacao numerica e o grupo soma 0.
+'            - Texto com * ou ? tem ~, * e ? escapados com ~: sem isso, "Kit*"
+'              soma tambem "Kit". Testado no Excel para Mac: o ~ so e lido como
+'              escape quando o criterio tem * ou ?; sem eles, "A~B" e comparado
+'              ao pe da letra e nao pode ser escapado.
+'            - Numero, data e logico seguem como valor.
+'------------------------------------------------------------------------------
+Private Function Igual(ByVal expr As String) As String
+    Igual = "LET(xz," & expr & ",IF(ISTEXT(xz),""=""&IF(LEN(SUBSTITUTE(SUBSTITUTE(xz,""*"",""""),""?"",""""))<LEN(xz)," & _
+        "SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(xz,""~"",""~~""),""*"",""~*""),""?"",""~?""),xz),xz))"
 End Function
 
 Private Function TotalMedida() As String
@@ -906,7 +936,7 @@ End Function
 ' Grupos unicos (sem vazios/erros) ordenados pela medida; topN = 0 -> todos.
 Private Function GruposOrdenados(ByVal jCat As Long, ByVal topN As Long) As String
     Dim s As String
-    s = "LET(c," & Ref(jCat) & ",u,UNIQUE(FILTER(c,IFERROR(c<>"""",FALSE))),s,SORTBY(u," & Agg(mINum, "c,u") & ",-1),"
+    s = "LET(c," & Ref(jCat) & ",u,UNIQUE(FILTER(c,IFERROR(c<>"""",FALSE))),s,SORTBY(u," & Agg(mINum, "c," & Igual("u")) & ",-1),"
     If topN > 0 Then s = s & "TAKE(s," & topN & "))" Else s = s & "s)"
     GruposOrdenados = s
 End Function
@@ -1019,30 +1049,79 @@ Private Function MesmaEscala(ByVal j1 As Long, ByVal j2 As Long) As Boolean
 Nao:
 End Function
 
-' A maior fatia da categoria tem 50% ou mais da medida (e nada e negativo)?
+' True se os grupos sao codigos numericos (ex.: TC = 1, 2, 3).
 Private Function GruposNumericos(ByVal grupos As Collection) As Boolean
-    ' True se os grupos sao codigos numericos (ex.: TC = 1, 2, 3)
     If grupos.Count = 0 Then Exit Function
     GruposNumericos = IsNumeric(grupos(1)) And VarType(grupos(1)) <> vbString
 End Function
 
+'------------------------------------------------------------------------------
+' Dominante
+' Proposito: dizer se a maior fatia da categoria tem 50% ou mais da medida
+'            (e nada e negativo), condicao da pizza.
+' Efeitos:    nenhum. Soma em VBA, numa passada pelas linhas: agrupa como
+'             ValoresDistintos (sem diferenciar maiusculas, sem curinga) e
+'             ignora celulas com erro na medida, como os cards. Nao usa
+'             Application.SumIfs: com criterio numerico em texto, ele deu
+'             erro 6 ("Estouro") no Excel para Mac (teste de 08/11/2026).
+'------------------------------------------------------------------------------
 Private Function Dominante(ByVal jCat As Long) As Boolean
-    Dim grupos As Collection, g As Variant, v As Variant, total As Double, maior As Double
-    Dim faixaCat As Range, faixaMed As Range
+    Dim grupos As Collection, pos As Collection, somas() As Double
+    Dim vc As Variant, vm As Variant, x As Variant, v As Variant
+    Dim i As Long, k As Long, total As Double, maior As Double
 
     Set grupos = modDados.ValoresDistintos(mLo, jCat, MAX_FATIAS)
-    Set faixaCat = mLo.ListColumns(jCat).DataBodyRange
-    If mINum > 0 Then Set faixaMed = mLo.ListColumns(mINum).DataBodyRange
-    For Each g In grupos
-        If mINum > 0 Then
-            v = Application.SumIfs(faixaMed, faixaCat, g)
-        Else
-            v = Application.CountIfs(faixaCat, g)
+    If grupos.Count < 2 Or grupos.Count > MAX_FATIAS Then Exit Function
+    Set pos = New Collection
+    ReDim somas(1 To grupos.Count)
+    For k = 1 To grupos.Count
+        pos.Add k, LCase$(CStr(grupos(k)))
+    Next k
+
+    vc = ValoresColuna(jCat)
+    If mINum > 0 Then vm = ValoresColuna(mINum)
+    For i = 1 To UBound(vc, 1)
+        x = vc(i, 1)
+        If Not IsError(x) And Not IsEmpty(x) Then
+            k = 0
+            On Error Resume Next
+            k = pos(LCase$(CStr(x)))
+            On Error GoTo 0
+            If k > 0 Then
+                If mINum = 0 Then
+                    somas(k) = somas(k) + 1
+                Else
+                    v = vm(i, 1)
+                    If EhNumero(v) Then somas(k) = somas(k) + v
+                End If
+            End If
         End If
-        If IsError(v) Then Exit Function
-        If v < 0 Then Exit Function
-        total = total + v
-        If v > maior Then maior = v
-    Next g
+    Next i
+
+    For k = 1 To grupos.Count
+        If somas(k) < 0 Then Exit Function
+        total = total + somas(k)
+        If somas(k) > maior Then maior = somas(k)
+    Next k
     If total > 0 Then Dominante = (maior / total >= DOMINANCIA)
+End Function
+
+' Valores de uma coluna de tblDados como matriz n x 1 (tambem com 1 linha).
+Private Function ValoresColuna(ByVal j As Long) As Variant
+    Dim v As Variant
+    If mLo.DataBodyRange.Rows.Count = 1 Then
+        ReDim v(1 To 1, 1 To 1)
+        v(1, 1) = mLo.ListColumns(j).DataBodyRange.Cells(1, 1).Value
+        ValoresColuna = v
+    Else
+        ValoresColuna = mLo.ListColumns(j).DataBodyRange.Value
+    End If
+End Function
+
+' Numero que SUMIFS somaria: nao e erro, texto, logico nem vazio.
+Private Function EhNumero(ByVal v As Variant) As Boolean
+    Select Case VarType(v)
+        Case vbInteger, vbLong, vbSingle, vbDouble, vbCurrency, vbDecimal
+            EhNumero = True
+    End Select
 End Function

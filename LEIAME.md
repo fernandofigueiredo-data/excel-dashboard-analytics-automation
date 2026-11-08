@@ -122,6 +122,10 @@ No primeiro uso, se a pasta de trabalho não tiver a planilha `Dados`, a macro p
   Como as colunas são escolhidas:
   - **partes** e **fatias** dão preferência a categorias de texto ("Tipo de Controle") sobre códigos numéricos (TC = 1, 2, 3);
   - medidas de **escalas diferentes** (por exemplo Receita e Quantidade) não se misturam no mesmo gráfico agrupado.
+
+  Como os grupos são somados (`SUMIFS` montado por `modGraficos.Agg` e `Igual`):
+  - a categoria é comparada pelo texto exato, sem diferenciar maiúsculas: `<18`, `>=60` e `Kit*` são lidos como texto. Sem isso, o `SUMIFS` lê `<18` como "menor que 18" e `*` como curinga;
+  - células com erro (`#N/D` etc.) na coluna numérica ficam de fora, pelo critério `">-1E+307"` na própria medida. Os cards fazem o mesmo com `AGGREGATE`, então o total dos gráficos bate com o dos cards.
 - **De onde os gráficos leem.** Da área auxiliar na coluna S em diante, que tem fórmulas de matriz dinâmica. Essa área é exposta pelos nomes `dsG_*` (por exemplo `=Dashboard!$S$5#`), então os gráficos crescem com `tblDados`.
 - **Estilos.** `DS_Texto`, `DS_Header`, `DS_Card`, mais três estilos extras, cada um com motivo:
   - `DS_CardRotulo`: hierarquia entre o rótulo e o valor do card;
@@ -161,8 +165,6 @@ Para criar um tema, acrescente uma linha em `tblTemas`: nome, três cores em R, 
 - A planilha **Dashboard** é sempre recriada inteira: não coloque conteúdo manual nela. Os gráficos que o Atualizar apaga são só os que ele mesmo criou (nome começando com `DS_G`); um gráfico feito à mão fica, mas as células embaixo dele são limpas. Para editar um gráfico gerado, use **Fixar gráfico**.
 - A base precisa começar em **Dados!A1**, com o cabeçalho na linha 1. Se a planilha de origem tem linhas de título acima da tabela, como a `Base_IFData`, copie só a tabela e cole em Dados!A1 usando **Colar Especial › Valores**.
 - As colunas e barras agrupadas usam a **primeira** e a **segunda** coluna categórica. Numa base em que essa coluna é um nome único por linha (por exemplo Instituição), o gráfico vira um ranking "10 maiores" e não um agrupamento como TCB ou tipo de controle.
-- Erro de fórmula (`#N/D`) em uma coluna numérica faz o `SUMIFS` dos gráficos devolver erro, e a área auxiliar mostra 0. Os cards não são afetados.
-- Categorias com `*`, `?` ou `~` são lidas como curinga pelo `SUMIFS`/`COUNTIFS`, e a soma pode ficar errada.
 - Datas guardadas como texto contam como coluna categórica.
 - Uma coluna de inteiros com poucos valores diferentes e cabeçalho em sigla curta maiúscula (por exemplo "ANO" ou "QTD") é tratada como código de classe e fica sem cards. Para ela virar medida, renomeie a coluna com um nome por extenso, como "Quantidade".
 
@@ -185,7 +187,7 @@ Duas correções saíram desses testes:
 - o eixo dos gráficos agora usa um formato neutro de milhar;
 - somas de colunas inteiras não mostram mais `,00`.
 
-A correção do eixo foi validada na janela Imediata do Editor. O `modDashboard.bas` final, que já inclui essa correção, não foi reimportado e executado de ponta a ponta.
+A correção do eixo foi validada na janela Imediata do Editor e depois de ponta a ponta, na montagem do `.xlsm` de 26/10/2026 (seção abaixo), já com o `modDashboard.bas` final.
 
 ## Teste com a base IFData (Banco Central, junho de 2026)
 
@@ -228,13 +230,9 @@ O suplemento foi montado com os 5 módulos, a `clsEventosApp` e o código de Est
 | Troca para "Noite Escura" em Config!B3 | O evento de aplicação do suplemento reaplicou o tema |
 | Fechar sem salvar | O livro de teste e o suplemento foram fechados sem alterar outros arquivos |
 
-O que não foi testado:
+O que não foi testado nessa data: o botão **Aplicar tema** da faixa, a instalação permanente em Suplementos do Excel e o Windows. Os dois primeiros foram testados em 08/11/2026 (ver [Testes finais](#testes-finais-de-ponta-a-ponta-08112026-excel-161144-para-mac)); o Windows continua sem teste.
 
-- o botão **Aplicar tema** da faixa, que chama a mesma rotina da troca pela Config;
-- a instalação permanente em Suplementos do Excel;
-- o Windows.
-
-Observação (corrigida em 04/11/2026): o modelo `.xlsm` e o suplemento têm o mesmo nome base (`DashboardGenerator`) e o Excel não abre os dois juntos ("não pode abrir duas pastas de trabalho com o mesmo nome"). Para usar os dois ao mesmo tempo, renomeie uma cópia do `.xlam`. Esse cenário não foi testado.
+Observação (revista em 08/11/2026): a nota de 04/11 dizia que o Excel não abre o `.xlsm` e o `.xlam` juntos. O teste de 08/11 mostrou outra coisa: com o suplemento instalado e carregado, o `.xlsm` abre normalmente. O que o Excel recusa ("não pode abrir duas pastas de trabalho com o mesmo nome") é abrir um segundo `DashboardGenerator.xlam` enquanto outro já está carregado, que foi o que aconteceu em 04/11, porque a cópia instalada já estava aberta.
 
 ## Ajuste da regra de código de classe (30/10/2026)
 
@@ -245,7 +243,7 @@ O ajuste foi feito no `modDados` e aplicado ao `.xlam` e ao `.xlsm`. Testes com 
 | Livro com "Itens" (1 a 12) | Os cards **Soma de Itens 1.894** e **Média de Itens 6,31** voltaram, iguais ao valor calculado fora do Excel |
 | IFData | TC e TI seguem como categoria e Código como identificador. Cards e Top 10 iguais aos do teste anterior |
 
-O `.xlsm` recebeu o `modDados` novo, compilou e foi salvo. O `AtualizarTudo` não foi rodado de novo nele, porque o dashboard de exemplo salvo não muda: a coluna Quantidade tem 40 valores distintos. O `.xlsm` ainda não tem a correção do `modConfig` (guardar a aba ativa). Essa correção só faz diferença quando a pasta de trabalho não tem a aba Dados, e o `.xlsm` sempre tem.
+O `.xlsm` recebeu o `modDados` novo, compilou e foi salvo. O `AtualizarTudo` não foi rodado de novo nele, porque o dashboard de exemplo salvo não muda: a coluna Quantidade tem 40 valores distintos. Nessa data o `.xlsm` ainda não tinha a correção do `modConfig` (guardar a aba ativa). Em 08/11/2026 o código dos dois arquivos foi extraído e comparado com `vba/`: é o mesmo, já com essa correção.
 
 Durante este teste, o Excel mostrou "O arquivo não pode ser acessado" e desativou a AutoRecuperação até o Excel ser reiniciado. Causa provável: apaguei à mão o arquivo de trava `~$DashboardGenerator.xlam` que o Excel cria na pasta. A causa não foi confirmada, e o aviso não apareceu nos testes anteriores.
 
@@ -311,3 +309,55 @@ Os testes foram feitos numa cópia do `.xlsm`. Depois os módulos foram montados
 | Botão Fixar gráfico da faixa, numa pasta em branco | Mostra "Este livro ainda não tem Dashboard" |
 
 Encontrado e corrigido durante o teste: a árvore não cria nomes `dsM<n>_*`, e por isso o gráfico fixado depois dela repetia o número. Agora o número também conta os gráficos `Meu<n>_*` que já existem.
+
+## Testes finais de ponta a ponta (08/11/2026, Excel 16.114.4 para Mac)
+
+Objetivo: fechar o que faltava testar (botão **Aplicar tema** da faixa e instalação permanente) e conferir os números dos gráficos, não só se eles aparecem.
+
+**Como os números foram conferidos.** Depois de cada Atualizar, a área auxiliar do Dashboard (linhas 3 a 60, colunas S em diante) e a aba Dados foram lidas do Excel por AppleScript. As somas por grupo, por mês e por categoria × parte foram recalculadas em Python a partir dos mesmos dados e comparadas valor a valor. Bases usadas:
+
+- a base de exemplo do `.xlsm` (240 linhas);
+- uma base de 120 linhas com categorias `<18`, `18-29`, `30-59`, `>=60` e produtos `Kit` e `Kit*`;
+- uma base de 80 linhas com `=NA()` em duas células da coluna numérica.
+
+### Auditoria antes dos testes
+
+- O código dentro do `.xlsm` e do `.xlam` foi extraído e comparado com `vba/`: era o mesmo, só com diferenças de maiúsculas que o Editor do VBA faz sozinho.
+- O `.xlsm` publicado levava uma referência ao painel do suplemento web "Claude for Excel" (`xl/webextensions`, com um identificador de arquivo), gravada ao salvar com o painel aberto. Ela foi removida do pacote; o projeto VBA não foi tocado.
+
+### Erros encontrados e corrigidos
+
+| Erro | Efeito no dashboard | Correção |
+|---|---|---|
+| Categorias como `<18` e `>=60` viravam comparação no `SUMIFS` | Grupos com soma 0; o título apontava o líder errado ("30-59 lidera em Valor") | `modGraficos.Igual`: critério `"="&texto`, para a categoria ser lida como texto |
+| `*` e `?` na categoria viravam curinga | `Kit*` somava também `Kit` (28.058,79 em vez de 13.514,92): "Kit* lidera em Valor (50% do total)" | `Igual` escapa `~`, `*` e `?` quando o texto tem curinga. Testado no Excel para Mac: o `~` só é lido como escape quando o critério tem `*` ou `?` |
+| Um `#N/D` na coluna numérica zerava o grupo inteiro | Grupos com erro iam a 0 e para o topo: "Sul lidera em Valor (0% do total)" | `modGraficos.Agg` acrescenta o critério `">-1E+307"` na própria medida, que deixa as células com erro de fora |
+| Achado durante a correção: `Application.SumIfs` chamado pelo VBA com o critério `">-1E+307"` deu erro 6 ("Estouro") | Na primeira execução numa pasta com aba a renomear e `#N/D` na medida, o Atualizar parava com "Erro ao montar o dashboard: 6 - Estouro"; a segunda execução funcionava | `modGraficos.Dominante` (regra da pizza) passou a somar os grupos em VBA, numa passada pelas linhas, sem `SumIfs`. As fórmulas das células, que usam o mesmo critério, deram os números certos em todos os testes |
+
+Também mudou a mensagem do **Aplicar tema** numa pasta sem Dashboard: antes pedia para "executar AtualizarTudo"; agora diz "Clique em Atualizar primeiro", como o Fixar gráfico.
+
+Só `modGraficos.bas` e `modTema.bas` mudaram. Os dois foram reimportados no `.xlsm` e no `.xlam`, os projetos compilaram sem erro, e o código extraído dos arquivos finais é igual ao de `vba/`.
+
+### Resultados (versão final)
+
+| Teste | Resultado |
+|---|---|
+| `.xlsm` com a base de exemplo | 5 cards e 9 gráficos, sem avisos. 66 valores da área auxiliar iguais ao cálculo independente. Cards: 240 registros, Receita 823.011,33 (média 3.429,21) e Quantidade 4.843 (média 20,18), iguais ao cálculo independente |
+| Base com `<18`, `>=60` e `Kit*`, pelo suplemento | 9 gráficos, sem avisos; 58 valores iguais. "<18 lidera em Valor (29% do total)" e "Kit lidera em Valor (26% do total)" |
+| Base com `#N/D`, pelo suplemento, na primeira execução (com a pergunta de renomear a aba) | 8 gráficos; a pizza não sai porque nenhuma fatia domina, e o aviso diz isso. 45 valores iguais; a soma dos grupos é igual ao card (42.818,53) |
+| Botão **Aplicar tema** da faixa | Com os eventos desligados, `Config!B3` foi trocado para "Noite Escura" e o Dashboard continuou azul. O botão aplicou o tema: fundo RGB(17, 24, 39) |
+| Botão **Fixar gráfico** da faixa, com o gráfico selecionado | Fixou direto, sem a lista. Cópia `Meu1_ColunasAgrupadas` com séries em `dsM1_*`, título ligado e fórmulas copiadas com as referências deslocadas. Ao somar 1.000 a uma linha de Dados, a cópia passou de 12.431,24 para 13.431,24 sem clicar em Atualizar |
+| Instalação permanente (Ferramentas › Suplementos do Excel) | O suplemento instalado carregou ao abrir o Excel, antes de qualquer arquivo. A guia **Dashboard** apareceu numa pasta comum, e o Atualizar gerou o painel com os 58 valores certos. O Excel fechou sem pedir para salvar o suplemento |
+| `.xlsm` com o suplemento instalado e carregado | Abriu normalmente, na aba **Como usar**. A troca de tema por `Config!B3` rodou nos dois eventos (o da planilha e o do suplemento) sem erro. A macro do botão Fixar gráfico do modelo fixou a rosca |
+| Pasta em branco | **Aplicar tema** e **Fixar gráfico** mostram "Este livro ainda não tem Dashboard. Clique em Atualizar primeiro." |
+| `.xlsm` final, sem o painel web | O pacote abre, pede para habilitar as macros e abre na aba **Como usar** |
+
+As capturas de antes e depois estão em `teste_bordas/`.
+
+### Observações do ambiente (Excel para Mac)
+
+- **Acesso ao projeto VBA desligado.** Nesta máquina, "confiar no acesso ao modelo de objeto do projeto VBA" está desligado, então os módulos foram trocados pelo Editor do VBA: **Arquivo › Remover** e **Arquivo › Importar Arquivo…**, de uma pasta sem acento no caminho.
+- **Dois menus "Importar".** Com o Editor aberto, a barra de menus pode voltar a ser a da planilha. Aí **Arquivo › Importar** abre o assistente de importação de texto do Excel, não a importação de módulo. Confira se a barra mostra **Depurar** e **Executar** antes de importar.
+- **Painel web no `.xlsm`.** Antes de publicar, confira que o `.xlsm` não tem `xl/webextensions`. O Excel grava ali o painel de um suplemento web, como o Claude for Excel, se ele estiver aberto ao salvar.
+
+O que continua sem teste: **Windows**.
